@@ -40,9 +40,8 @@ def load_and_translate_questions(limit=5):
     return preguntas
 
 # 1) Precarga de preguntas
-if "preguntas" not in st.session_state:
-    with st.spinner("Cargando y traduciendo preguntas..."):
-        preguntas = load_and_translate_questions(limit=5)
+def init_quiz():
+    preguntas = load_and_translate_questions(limit=5)
     if not preguntas:
         st.stop()
     st.session_state.preguntas = preguntas
@@ -50,6 +49,9 @@ if "preguntas" not in st.session_state:
     st.session_state.correctas = 0
     st.session_state.respondido = False
     st.session_state.iniciado = False
+
+if "preguntas" not in st.session_state:
+    init_quiz()
 
 # 2) Pedir nombre
 name = st.text_input("¿Cuál es tu nombre?", key="name_input")
@@ -71,30 +73,42 @@ if not st.session_state.iniciado:
         st.stop()
     st.session_state.iniciado = True
 
+# Callback para responder
+def submit_answer():
+    idx = st.session_state.idx
+    actual = st.session_state.preguntas[idx]
+    selected = st.session_state.get(f"resp_{idx}")
+    if selected == actual["correcta"]:
+        st.session_state.correctas += 1
+        st.session_state.feedback = (True, "✅ ¡Correcto!")
+    else:
+        st.session_state.feedback = (False, f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
+    st.session_state.respondido = True
+
+# Callback para siguiente pregunta
+def next_question():
+    st.session_state.idx += 1
+    st.session_state.respondido = False
+    st.session_state.feedback = None
+
 # 4) Lógica del quiz
 total = len(st.session_state.preguntas)
 idx = st.session_state.idx
 if idx < total:
     actual = st.session_state.preguntas[idx]
     st.subheader(f"Pregunta {idx+1} de {total}")
-    respuesta = st.radio(
-        actual["pregunta"], actual["opciones"], key=f"resp_{idx}"
-    )
-    placeholder = st.empty()
+    # Control de clave para radio
+    respuesta_key = f"resp_{idx}"
+    st.radio(actual["pregunta"], actual["opciones"], key=respuesta_key)
+
+    # Botón dinámico
     if not st.session_state.respondido:
-        if placeholder.button("Responder"):
-            if respuesta == actual["correcta"]:
-                st.success("✅ ¡Correcto!")
-                st.session_state.correctas += 1
-            else:
-                st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
-            st.session_state.respondido = True
-            st.experimental_rerun()
+        st.button("Responder", on_click=submit_answer)
     else:
-        if placeholder.button("Siguiente"):
-            st.session_state.idx += 1
-            st.session_state.respondido = False
-            st.experimental_rerun()
+        # Mostrar feedback
+        ok, msg = st.session_state.feedback
+        st.success(msg) if ok else st.error(msg)
+        st.button("Siguiente", on_click=next_question)
 
 # 5) Mostrar resultado final
 else:
@@ -104,8 +118,5 @@ else:
         st.success(f"🎉 {name}, acertaste {aciertos}/{total}. ¡Buen trabajo!")
     else:
         st.error(f"❌ {name}, solo acertaste {aciertos}/{total}. ¡Sigue practicando!")
-    if st.button("Reiniciar Quiz"):
-        for var in ["preguntas", "idx", "correctas", "respondido", "iniciado", "desea"]:
-            st.session_state.pop(var, None)
-        st.experimental_rerun()
+    st.button("Reiniciar Quiz", on_click=init_quiz)
 
