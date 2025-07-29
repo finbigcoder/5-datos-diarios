@@ -1,44 +1,68 @@
-import unicodedata
 import requests
 from deep_translator import GoogleTranslator
 import random
 import streamlit as st
 
-# Configuración de la página\ nst.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
-
-# Función para normalizar texto (opcional)
-def normalizar(texto):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', texto.lower())
-        if unicodedata.category(c) != 'Mn'
-    )
-
-# Título de la app
+# Configuración de la página
+st.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
 st.title("🎓 Test de Cultura General")
 
-# 1) Pedir nombre
-name = st.text_input("¿Cuál es tu nombre?")
-if not name:
-    st.stop()
+@st.cache_data(show_spinner=False)
+def load_and_translate_questions(limit=5):
+    """
+    Descarga preguntas de trivia, traduce al español y devuelve una lista de dicts.
+    Esta función está cacheada para no repetir llamadas en reruns.
+    """
+    try:
+        response = requests.get(
+            f"https://the-trivia-api.com/api/questions?limit={limit}",
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        st.error(f"Error cargando preguntas: {e}")
+        return []
 
-# 2) Precarga y traducción de preguntas (solo una vez)
+    preguntas = []
+    for q in data:
+        # Traducción de texto
+        try:
+            pregunta_es = GoogleTranslator(source='auto', target='es').translate(q['question'])
+            correcta_es = GoogleTranslator(source='auto', target='es').translate(q['correctAnswer'])
+            incorrectas_es = [
+                GoogleTranslator(source='auto', target='es').translate(x)
+                for x in q['incorrectAnswers']
+            ]
+        except Exception as e:
+            st.error(f"Error traduciendo preguntas: {e}")
+            return []
+
+        opciones = incorrectas_es + [correcta_es]
+        random.shuffle(opciones)
+        preguntas.append({
+            "pregunta": pregunta_es,
+            "correcta": correcta_es,
+            "opciones": opciones
+        })
+    return preguntas
+
+# 1) Precarga y traducción de preguntas
 if "preguntas" not in st.session_state:
     with st.spinner("Cargando y traduciendo preguntas..."):
-        response = requests.get("https://the-trivia-api.com/api/questions?limit=5")
-        data = response.json()
-        preguntas = []
-        for q in data:
-            pregunta_es = GoogleTranslator(source='auto', target='es').translate(q['question'])
-            correcta = GoogleTranslator(source='auto', target='es').translate(q['correctAnswer'])
-            incorrectas = [GoogleTranslator(source='auto', target='es').translate(x) for x in q['incorrectAnswers']]
-            opciones = incorrectas + [correcta]
-            random.shuffle(opciones)
-            preguntas.append({"pregunta": pregunta_es, "correcta": correcta, "opciones": opciones})
+        preguntas = load_and_translate_questions(limit=5)
+    if not preguntas:
+        st.stop()
     st.session_state.preguntas = preguntas
-    st.session_state.index = 0
+    st.session_state.idx = 0
     st.session_state.correctas = 0
     st.session_state.respondido = False
     st.session_state.iniciado = False
+
+# 2) Pedir nombre
+en name = st.text_input("¿Cuál es tu nombre?", key="name_input")
+if not name:
+    st.stop()
 
 # 3) Confirmación de participación
 if not st.session_state.iniciado:
@@ -48,17 +72,16 @@ if not st.session_state.iniciado:
         key="desea"
     )
     if desea == "":
-        st.write("👉 Por favor selecciona “Sí” o “No” para continuar.")
+        st.info("👉 Selecciona ‘Sí’ para comenzar o ‘No’ para salir.")
         st.stop()
-    elif desea == "No":
+    if desea == "No":
         st.info("Está bien, ¡tal vez otro día! 😄")
         st.stop()
-    else:
-        st.session_state.iniciado = True
+    st.session_state.iniciado = True
 
 # 4) Lógica del quiz
 total = len(st.session_state.preguntas)
-idx = st.session_state.index
+idx = st.session_state.idx
 if idx < total:
     actual = st.session_state.preguntas[idx]
     st.subheader(f"Pregunta {idx+1} de {total}")
@@ -68,10 +91,9 @@ if idx < total:
         key=f"resp_{idx}"
     )
 
-    # Botón único que cambia de "Responder" a "Siguiente"
-    btn = st.empty()
+    placeholder = st.empty()
     if not st.session_state.respondido:
-        if btn.button("Responder"):
+        if placeholder.button("Responder", key=f"btn_resp_{idx}"):
             if respuesta == actual["correcta"]:
                 st.success("✅ ¡Correcto!")
                 st.session_state.correctas += 1
@@ -79,8 +101,8 @@ if idx < total:
                 st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
             st.session_state.respondido = True
     else:
-        if btn.button("Siguiente"):
-            st.session_state.index += 1
+        if placeholder.button("Siguiente", key=f"btn_sig_{idx}"):
+            st.session_state.idx += 1
             st.session_state.respondido = False
 
 # 5) Mostrar resultado final
@@ -92,6 +114,6 @@ else:
     else:
         st.error(f"❌ {name}, solo acertaste {aciertos}/{total}. ¡Sigue practicando!")
     if st.button("Reiniciar Quiz"):
-        for key in ["preguntas", "index", "correctas", "respondido", "iniciado", "desea"]:
-            st.session_state.pop(key, None)
+        for var in ["preguntas", "idx", "correctas", "respondido", "iniciado", "desea"]:
+            st.session_state.pop(var, None)
         st.experimental_rerun()
