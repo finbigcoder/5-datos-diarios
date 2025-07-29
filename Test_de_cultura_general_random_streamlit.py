@@ -7,12 +7,11 @@ import streamlit as st
 st.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
 st.title("🎓 Test de Cultura General")
 
-@st.cache_data(show_spinner=False)
+# Función para cargar y traducir preguntas sin caching
 def load_and_translate_questions(limit=5):
     """
     Descarga preguntas de trivia y las traduce al español.
     Retorna lista de diccionarios.
-    Esta función está cacheada para no repetir llamadas.
     """
     try:
         response = requests.get(
@@ -58,7 +57,7 @@ def init_quiz():
     st.session_state.iniciado = False
     st.session_state.feedback = None
 
-# Ejecutar inicialización una sola vez
+# Ejecutar inicialización siempre al cargar o reiniciar
 if "preguntas" not in st.session_state:
     init_quiz()
 
@@ -97,9 +96,11 @@ def submit_answer():
 
 
 def next_question():
+    # Al avanzar, recargar nuevas preguntas si es final
     st.session_state.idx += 1
     st.session_state.respondido = False
     st.session_state.feedback = None
+    # Si terminó el quiz, permitir reiniciar
 
 # Lógica del quiz
 total = len(st.session_state.preguntas)
@@ -108,7 +109,7 @@ if idx < total:
     actual = st.session_state.preguntas[idx]
     st.subheader(f"Pregunta {idx+1} de {total}")
     st.radio(actual["pregunta"], actual["opciones"], key=f"resp_{idx}")
-    
+
     if not st.session_state.respondido:
         st.button("Responder", on_click=submit_answer, key=f"btn_resp_{idx}")
     else:
@@ -119,12 +120,11 @@ if idx < total:
             st.error(msg)
         st.button("Siguiente", on_click=next_question, key=f"btn_sig_{idx}")
 else:
-    # Resultado final
-    aciertos = st.session_state.correctas
+    # Resultado final\ n    aciertos = st.session_state.correctas
     st.markdown("## 🎯 Resultado Final")
     if aciertos > total / 2:
         st.success(f"🎉 {declare_name}, acertaste {aciertos}/{total}. ¡Buen trabajo!")
     else:
         st.error(f"❌ {declare_name}, solo acertaste {aciertos}/{total}. ¡Sigue practicando!")
-    st.button("Reiniciar Quiz", on_click=init_quiz)
+    st.button("Reiniciar Quiz", on_click=init_quiz, key="btn_restart")
 
