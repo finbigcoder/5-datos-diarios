@@ -60,7 +60,7 @@ if "preguntas" not in st.session_state:
     st.session_state.iniciado = False
 
 # 2) Pedir nombre
-en name = st.text_input("¿Cuál es tu nombre?", key="name_input")
+name = st.text_input("¿Cuál es tu nombre?", key="name_input")
 if not name:
     st.stop()
 
