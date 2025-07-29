@@ -69,9 +69,9 @@ if idx < total:
     )
 
     # Botón único que cambia de "Responder" a "Siguiente"
-    placeholder = st.empty()
+    btn = st.empty()
     if not st.session_state.respondido:
-        if placeholder.button("Responder"):
+        if btn.button("Responder"):
             if respuesta == actual["correcta"]:
                 st.success("✅ ¡Correcto!")
                 st.session_state.correctas += 1
@@ -79,7 +79,7 @@ if idx < total:
                 st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
             st.session_state.respondido = True
     else:
-        if placeholder.button("Siguiente"):
+        if btn.button("Siguiente"):
             st.session_state.index += 1
             st.session_state.respondido = False
 
