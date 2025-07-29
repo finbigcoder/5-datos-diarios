@@ -16,7 +16,8 @@ def normalizar(texto):
 # Título de la app
 st.title("🎓 Test de Cultura General")
 
-# 1) Pedir nombre\ nname = st.text_input("¿Cuál es tu nombre?")
+# 1) Pedir nombre
+name = st.text_input("¿Cuál es tu nombre?")
 if not name:
     st.stop()
 
