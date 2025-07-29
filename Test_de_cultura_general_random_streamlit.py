@@ -3,7 +3,8 @@ from deep_translator import GoogleTranslator
 import random
 import streamlit as st
 
-# Configuración de la página\ nst.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
+# Configuración de la página
+st.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
 st.title("🎓 Test de Cultura General")
 
 @st.cache_data(show_spinner=False)
@@ -26,8 +27,10 @@ def load_and_translate_questions(limit=5):
         try:
             pregunta_es = GoogleTranslator(source='auto', target='es').translate(q['question'])
             correcta_es = GoogleTranslator(source='auto', target='es').translate(q['correctAnswer'])
-            incorrectas_es = [GoogleTranslator(source='auto', target='es').translate(x)
-                               for x in q['incorrectAnswers']]
+            incorrectas_es = [
+                GoogleTranslator(source='auto', target='es').translate(x)
+                for x in q['incorrectAnswers']
+            ]
         except Exception as e:
             st.error(f"Error traduciendo preguntas: {e}")
             return []
@@ -74,20 +77,24 @@ idx = st.session_state.idx
 if idx < total:
     actual = st.session_state.preguntas[idx]
     st.subheader(f"Pregunta {idx+1} de {total}")
-    respuesta = st.radio(actual["pregunta"], actual["opciones"], key=f"resp_{idx}")
-
+    respuesta = st.radio(
+        actual["pregunta"], actual["opciones"], key=f"resp_{idx}"
+    )
+    placeholder = st.empty()
     if not st.session_state.respondido:
-        if st.button("Responder", key=f"btn_resp_{idx}"):
+        if placeholder.button("Responder"):
             if respuesta == actual["correcta"]:
                 st.success("✅ ¡Correcto!")
                 st.session_state.correctas += 1
             else:
                 st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
             st.session_state.respondido = True
+            st.experimental_rerun()
     else:
-        if st.button("Siguiente", key=f"btn_sig_{idx}"):
+        if placeholder.button("Siguiente"):
             st.session_state.idx += 1
             st.session_state.respondido = False
+            st.experimental_rerun()
 
 # 5) Mostrar resultado final
 else:
@@ -100,5 +107,5 @@ else:
     if st.button("Reiniciar Quiz"):
         for var in ["preguntas", "idx", "correctas", "respondido", "iniciado", "desea"]:
             st.session_state.pop(var, None)
-        # Se recarga automáticamente tras interacción
+        st.experimental_rerun()
 
