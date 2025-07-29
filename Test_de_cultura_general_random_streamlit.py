@@ -3,8 +3,7 @@ from deep_translator import GoogleTranslator
 import random
 import streamlit as st
 
-# Configuración de la página
-st.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
+# Configuración de la página\ nst.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
 st.title("🎓 Test de Cultura General")
 
 @st.cache_data(show_spinner=False)
@@ -13,9 +12,7 @@ def load_and_translate_questions(limit=5):
     Descarga preguntas de trivia y las traduce al español. Retorna lista de dicts.
     """
     try:
-        response = requests.get(
-            f"https://the-trivia-api.com/api/questions?limit={limit}", timeout=10
-        )
+        response = requests.get(f"https://the-trivia-api.com/api/questions?limit={limit}", timeout=10)
         response.raise_for_status()
         data = response.json()
     except Exception as e:
@@ -27,10 +24,8 @@ def load_and_translate_questions(limit=5):
         try:
             pregunta_es = GoogleTranslator(source='auto', target='es').translate(q['question'])
             correcta_es = GoogleTranslator(source='auto', target='es').translate(q['correctAnswer'])
-            incorrectas_es = [
-                GoogleTranslator(source='auto', target='es').translate(x)
-                for x in q['incorrectAnswers']
-            ]
+            incorrectas_es = [GoogleTranslator(source='auto', target='es').translate(x)
+                               for x in q['incorrectAnswers']]
         except Exception as e:
             st.error(f"Error traduciendo preguntas: {e}")
             return []
@@ -39,7 +34,8 @@ def load_and_translate_questions(limit=5):
         preguntas.append({"pregunta": pregunta_es, "correcta": correcta_es, "opciones": opciones})
     return preguntas
 
-# 1) Precarga de preguntas
+# Inicialización del quiz
+
 def init_quiz():
     preguntas = load_and_translate_questions(limit=5)
     if not preguntas:
@@ -49,31 +45,28 @@ def init_quiz():
     st.session_state.correctas = 0
     st.session_state.respondido = False
     st.session_state.iniciado = False
+    st.session_state.feedback = None
+    st.session_state.desea = ""
 
 if "preguntas" not in st.session_state:
     init_quiz()
 
-# 2) Pedir nombre
-name = st.text_input("¿Cuál es tu nombre?", key="name_input")
+# Pedir nombre\ nname = st.text_input("¿Cuál es tu nombre?", key="name_input")
 if not name:
     st.stop()
 
-# 3) Confirmación de participación
+# Confirmación de participación
 if not st.session_state.iniciado:
-    desea = st.radio(
-        "¿Quieres hacer un test de cultura general?",
-        ["", "Sí", "No"],
-        key="desea"
-    )
-    if desea == "":
+    st.session_state.desea = st.radio("¿Quieres hacer un test de cultura general?", ["", "Sí", "No"], key="desea")
+    if st.session_state.desea == "":
         st.info("👉 Selecciona ‘Sí’ para comenzar o ‘No’ para salir.")
         st.stop()
-    if desea == "No":
+    if st.session_state.desea == "No":
         st.info("Está bien, ¡tal vez otro día! 😄")
         st.stop()
     st.session_state.iniciado = True
 
-# Callback para responder
+# Callbacks para botones
 def submit_answer():
     idx = st.session_state.idx
     actual = st.session_state.preguntas[idx]
@@ -85,32 +78,27 @@ def submit_answer():
         st.session_state.feedback = (False, f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
     st.session_state.respondido = True
 
-# Callback para siguiente pregunta
+
 def next_question():
     st.session_state.idx += 1
     st.session_state.respondido = False
     st.session_state.feedback = None
 
-# 4) Lógica del quiz
+# Lógica del quiz
 total = len(st.session_state.preguntas)
 idx = st.session_state.idx
 if idx < total:
     actual = st.session_state.preguntas[idx]
     st.subheader(f"Pregunta {idx+1} de {total}")
-    # Control de clave para radio
-    respuesta_key = f"resp_{idx}"
-    st.radio(actual["pregunta"], actual["opciones"], key=respuesta_key)
+    st.radio(actual["pregunta"], actual["opciones"], key=f"resp_{idx}")
 
-    # Botón dinámico
     if not st.session_state.respondido:
-        st.button("Responder", on_click=submit_answer)
+        st.button("Responder", on_click=submit_answer, key=f"btn_resp_{idx}")
     else:
-        # Mostrar feedback
         ok, msg = st.session_state.feedback
         st.success(msg) if ok else st.error(msg)
-        st.button("Siguiente", on_click=next_question)
-
-# 5) Mostrar resultado final
+        st.button("Siguiente", on_click=next_question, key=f"btn_sig_{idx}")
+# Resultado final
 else:
     aciertos = st.session_state.correctas
     st.markdown("## 🎯 Resultado Final")
@@ -119,4 +107,3 @@ else:
     else:
         st.error(f"❌ {name}, solo acertaste {aciertos}/{total}. ¡Sigue practicando!")
     st.button("Reiniciar Quiz", on_click=init_quiz)
-
