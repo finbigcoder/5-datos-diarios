@@ -16,17 +16,24 @@ st.title("🎓 Test de Cultura General")
 # Paso 1: Nombre del usuario
 name = st.text_input("¿Cuál es tu nombre?")
 
-# Inicializar estado si no existe
-if "preguntas" not in st.session_state:
+# Inicializar estados
+if "estado" not in st.session_state:
+    st.session_state.estado = "esperando_nombre"  # puede ser: esperando_nombre, confirmar, quiz, resultado
     st.session_state.preguntas = []
     st.session_state.index = 0
     st.session_state.correctas = 0
-    st.session_state.quiz_iniciado = False
+    st.session_state.ultima_respuesta_correcta = None
 
-# Botón para empezar el quiz
-if name and not st.session_state.quiz_iniciado:
-    if st.button("¡Sí, quiero hacer el test!"):
-        # Cargar preguntas solo una vez
+# Paso 2: Confirmación para hacer el test
+if name and st.session_state.estado == "esperando_nombre":
+    st.session_state.estado = "confirmar"
+
+if st.session_state.estado == "confirmar":
+    st.subheader(f"Hola {name} 👋")
+    desea = st.radio("¿Quieres hacer un test de cultura general?", ["Sí", "No"])
+    if desea == "Sí":
+        st.session_state.estado = "quiz"
+        # Cargar preguntas
         response = requests.get("https://the-trivia-api.com/api/questions?limit=5")
         data = response.json()
         preguntas = []
@@ -42,33 +49,43 @@ if name and not st.session_state.quiz_iniciado:
                 "opciones": opciones
             })
         st.session_state.preguntas = preguntas
-        st.session_state.quiz_iniciado = True
+    elif desea == "No":
+        st.info("Está bien, ¡tal vez otro día! 😄")
+        st.stop()
 
-# Mostrar una pregunta a la vez
-if st.session_state.quiz_iniciado and st.session_state.index < len(st.session_state.preguntas):
+# Paso 3: Mostrar preguntas una a una
+if st.session_state.estado == "quiz" and st.session_state.index < len(st.session_state.preguntas):
     actual = st.session_state.preguntas[st.session_state.index]
     st.subheader(f"Pregunta {st.session_state.index + 1}")
     respuesta = st.radio(actual["pregunta"], actual["opciones"], key=st.session_state.index)
 
     if st.button("Responder"):
         if respuesta == actual["correcta"]:
-            st.success("¡Correcto!")
+            st.success("✅ ¡Correcto!")
             st.session_state.correctas += 1
+            st.session_state.ultima_respuesta_correcta = True
         else:
-            st.error(f"Incorrecto. La respuesta correcta era: {actual['correcta']}")
-        st.session_state.index += 1
+            st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
+            st.session_state.ultima_respuesta_correcta = False
 
-# Resultado final
-if st.session_state.index == len(st.session_state.preguntas) and st.session_state.quiz_iniciado:
-    st.markdown("## Resultado final:")
+    if st.session_state.ultima_respuesta_correcta is not None:
+        if st.button("Siguiente"):
+            st.session_state.index += 1
+            st.session_state.ultima_respuesta_correcta = None
+
+# Paso 4: Resultado final
+if st.session_state.index == len(st.session_state.preguntas) and st.session_state.estado == "quiz":
+    st.session_state.estado = "resultado"
+    st.markdown("## 🎯 Resultado final:")
     if st.session_state.correctas > 3:
         st.success(f"🎉 ¡Felicidades {name}! Aprobaste con {st.session_state.correctas}/5 respuestas correctas.")
     else:
         st.error(f"❌ Lo siento {name}, obtuviste {st.session_state.correctas}/5. ¡Puedes intentarlo de nuevo!")
 
-    # Botón para reiniciar
-    if st.button("Reiniciar quiz"):
-        st.session_state.preguntas = []
+    if st.button("Reiniciar test"):
+        st.session_state.estado = "confirmar"
         st.session_state.index = 0
         st.session_state.correctas = 0
-        st.session_state.quiz_iniciado = False
+        st.session_state.preguntas = []
+        st.session_state.ultima_respuesta_correcta = None
+
