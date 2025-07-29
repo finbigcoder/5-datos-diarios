@@ -57,7 +57,7 @@ def init_quiz():
     st.session_state.iniciado = False
     st.session_state.feedback = None
 
-# Ejecutar inicialización siempre al cargar o reiniciar
+# Ejecutar inicialización una sola vez
 if "preguntas" not in st.session_state:
     init_quiz()
 
@@ -96,11 +96,9 @@ def submit_answer():
 
 
 def next_question():
-    # Al avanzar, recargar nuevas preguntas si es final
     st.session_state.idx += 1
     st.session_state.respondido = False
     st.session_state.feedback = None
-    # Si terminó el quiz, permitir reiniciar
 
 # Lógica del quiz
 total = len(st.session_state.preguntas)
@@ -120,11 +118,11 @@ if idx < total:
             st.error(msg)
         st.button("Siguiente", on_click=next_question, key=f"btn_sig_{idx}")
 else:
-    # Resultado final\ n    aciertos = st.session_state.correctas
+    # Resultado final
+    aciertos = st.session_state.correctas
     st.markdown("## 🎯 Resultado Final")
     if aciertos > total / 2:
         st.success(f"🎉 {declare_name}, acertaste {aciertos}/{total}. ¡Buen trabajo!")
     else:
         st.error(f"❌ {declare_name}, solo acertaste {aciertos}/{total}. ¡Sigue practicando!")
     st.button("Reiniciar Quiz", on_click=init_quiz, key="btn_restart")
-
