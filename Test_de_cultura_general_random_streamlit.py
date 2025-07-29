@@ -4,8 +4,7 @@ from deep_translator import GoogleTranslator
 import random
 import streamlit as st
 
-# Configuración de la página
-st.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
+# Configuración de la página\ nst.set_page_config(page_title="Test de Cultura General", page_icon="🎓")
 
 # Función para normalizar texto (opcional)
 def normalizar(texto):
@@ -14,10 +13,10 @@ def normalizar(texto):
         if unicodedata.category(c) != 'Mn'
     )
 
+# Título de la app
 st.title("🎓 Test de Cultura General")
 
-# 1) Pedir nombre
-ame = st.text_input("¿Cuál es tu nombre?")
+# 1) Pedir nombre\ nname = st.text_input("¿Cuál es tu nombre?")
 if not name:
     st.stop()
 
