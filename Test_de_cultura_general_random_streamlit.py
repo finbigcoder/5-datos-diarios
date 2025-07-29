@@ -10,8 +10,7 @@ st.title("🎓 Test de Cultura General")
 @st.cache_data(show_spinner=False)
 def load_and_translate_questions(limit=5):
     """
-    Descarga preguntas de trivia, traduce al español y devuelve una lista de dicts.
-    Esta función está cacheada para no repetir llamadas en reruns.
+    Descarga preguntas de trivia, las traduce al español y devuelve una lista.
     """
     try:
         response = requests.get(
@@ -26,7 +25,6 @@ def load_and_translate_questions(limit=5):
 
     preguntas = []
     for q in data:
-        # Traducción de texto
         try:
             pregunta_es = GoogleTranslator(source='auto', target='es').translate(q['question'])
             correcta_es = GoogleTranslator(source='auto', target='es').translate(q['correctAnswer'])
@@ -37,7 +35,6 @@ def load_and_translate_questions(limit=5):
         except Exception as e:
             st.error(f"Error traduciendo preguntas: {e}")
             return []
-
         opciones = incorrectas_es + [correcta_es]
         random.shuffle(opciones)
         preguntas.append({
@@ -47,7 +44,7 @@ def load_and_translate_questions(limit=5):
         })
     return preguntas
 
-# 1) Precarga y traducción de preguntas
+# 1) Precarga de preguntas
 if "preguntas" not in st.session_state:
     with st.spinner("Cargando y traduciendo preguntas..."):
         preguntas = load_and_translate_questions(limit=5)
@@ -90,22 +87,23 @@ if idx < total:
         actual["opciones"],
         key=f"resp_{idx}"
     )
-
-    placeholder = st.empty()
+    # Botón Responder o Siguiente según estado
     if not st.session_state.respondido:
-        if placeholder.button("Responder", key=f"btn_resp_{idx}"):
+        if st.button("Responder", key=f"btn_resp_{idx}"):
             if respuesta == actual["correcta"]:
                 st.success("✅ ¡Correcto!")
                 st.session_state.correctas += 1
             else:
                 st.error(f"❌ Incorrecto. La respuesta correcta era: {actual['correcta']}")
             st.session_state.respondido = True
+            st.experimental_rerun()
     else:
-        if placeholder.button("Siguiente", key=f"btn_sig_{idx}"):
+        if st.button("Siguiente", key=f"btn_sig_{idx}"):
             st.session_state.idx += 1
             st.session_state.respondido = False
+            st.experimental_rerun()
 
-# 5) Mostrar resultado final
+# 5) Resultado final
 else:
     aciertos = st.session_state.correctas
     st.markdown("## 🎯 Resultado Final")
